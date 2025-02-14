@@ -8,4 +8,3 @@ const connectDB = async () => {
 };
 
 export default connectDB;
-// This file is used to connect to the MongoDB database. The connectDB function is an async function that connects to the MongoDB database using the MONGODB_URI environment variable. It then logs a message to the console when the connection is successful.
