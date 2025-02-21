@@ -5,8 +5,8 @@ import { assets } from '../assets/assets';
 
 const Navbar = () => {
   const [visible, setVisible] = useState(false);
-  const { setShowSearch, getCartCount } = useContext(ShopContext);
-  const navigate = useNavigate();
+  const { setShowSearch, getCartCount, navigate, token, setToken, setCartItems } = useContext(ShopContext);
+ 
 
   const handleSearchIconClick = () => {
     navigate('/collection'); // Navigate to the collection page
