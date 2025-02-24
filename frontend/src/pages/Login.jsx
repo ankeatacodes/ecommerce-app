@@ -1,37 +1,31 @@
 import React, { useState, useContext, useEffect } from 'react';
-import axios from 'axios'; // Missing import for axios
-import { toast } from 'react-toastify'; // Missing import for toast notifications
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom'; // Ensure navigate works
 import { ShopContext } from '../context/ShopContext';
 
 const Login = () => {
   const [currentState, setCurrentState] = useState('Login');
-  const { token, setToken, navigate, backendUrl } = useContext(ShopContext);
+  const { token, setToken, backendUrl } = useContext(ShopContext);
+  const navigate = useNavigate(); // Fix navigate issue
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const onSubmitHandler = async (event) => {
-    event.preventDefault(); // Prevent page reload on form submission
+    event.preventDefault();
     try {
-      if (currentState === 'Sign Up') {
-        const response = await axios.post(backendUrl + '/api/user/register', { name, email, password });
-        if (response.data.success) {
-          setToken(response.data.token);
-          localStorage.setItem('token', response.data.token);
-          
-        } else {
-          toast.error(response.data.message);
-        }
+      const endpoint = currentState === 'Sign Up' ? '/api/user/register' : '/api/user/login';
+      const payload = currentState === 'Sign Up' ? { name, email, password } : { email, password };
+
+      const response = await axios.post(backendUrl + endpoint, payload);
+
+      if (response.data.success) {
+        setToken(response.data.token);
+        localStorage.setItem('token', response.data.token);
       } else {
-        const response = await axios.post(backendUrl + '/api/user/login', { email, password });
-        if (response.data.success) {
-          setToken(response.data.token);
-          localStorage.setItem('token', response.data.token);
-          
-        } else {
-          toast.error(response.data.message);
-        }
+        toast.error(response.data.message);
       }
     } catch (error) {
       console.error("Authentication Error:", error);
@@ -43,9 +37,7 @@ const Login = () => {
     if (token) {
       navigate('/');
     }
-  }, [token]);
-  
-  
+  }, [token, navigate]); // Added navigate in dependencies
 
   return (
     <div className="text-center mt-14">
@@ -57,7 +49,7 @@ const Login = () => {
         </div>
 
         {/* Input Fields */}
-        {currentState === 'Login' ? '' : (
+        {currentState === 'Sign Up' && (
           <input
             onChange={(e) => setName(e.target.value)}
             value={name}

@@ -140,11 +140,13 @@ const ShopContextProvider = (props) => {
     
 
     useEffect(() => {
-        if (token && localStorage.getItem('token')) {
-            setToken(localStorage.getItem('token'))
-            getUserCart(localStorage.getItem('token'))
+        const storedToken = localStorage.getItem("token");
+        if (storedToken) {
+            setToken(storedToken);
+            getUserCart(storedToken);
         }
     }, []);
+    
     
 
     
