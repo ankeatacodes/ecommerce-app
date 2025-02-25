@@ -46,27 +46,15 @@ const placeOrderStripe = async (req, res) => {
     const { userId, items, amount, address } = req.body;
     const { origin } = req.headers;
 
-    const orderData = {
-      userId,
-      items,
-      address,
-      amount,
-      paymentMethod: "Stripe",
-      payment: false,
-      date: Date.now(),
-    };
-
-    // Create new order
-    const newOrder = new orderModel(orderData);
-    await newOrder.save();
+    if (!userId || !items || !amount || !address) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
+    }
 
     // Create Stripe line items
     const line_items = items.map((item) => ({
       price_data: {
-        currency: "usd", // Change to your currency
-        product_data: {
-          name: item.name,
-        },
+        currency: "usd",
+        product_data: { name: item.name },
         unit_amount: item.price * 100, // Convert price to cents
       },
       quantity: item.quantity,
@@ -77,9 +65,7 @@ const placeOrderStripe = async (req, res) => {
     line_items.push({
       price_data: {
         currency: "usd",
-        product_data: {
-          name: "Delivery Charges",
-        },
+        product_data: { name: "Delivery Charges" },
         unit_amount: deliveryCharge * 100,
       },
       quantity: 1,
@@ -87,8 +73,10 @@ const placeOrderStripe = async (req, res) => {
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
-      success_url: `${origin}/verify?success=true&orderId=${newOrder._id}`,
-      cancel_url: `${origin}/verify?success=false&orderId=${newOrder._id}`,
+      success_url: `${origin}/verify?success=true&userId=${userId}&items=${encodeURIComponent(
+        JSON.stringify(items)
+      )}&amount=${amount}&address=${encodeURIComponent(address)}`,
+      cancel_url: `${origin}/verify?success=false`,
       line_items,
       mode: "payment",
     });
@@ -101,23 +89,34 @@ const placeOrderStripe = async (req, res) => {
 };
 
 const verifyStripe = async (req, res) => {
-  const { orderId, success, userId } = req.body; 
-  
-    try {
-      if (success === "true") {
-        await orderModel.findByIdAndUpdate(orderId, { payment: true });
-        await userModel.findByIdAndUpdate(userId, { $pull: { cartData: {} } }); // Assuming you want to clear cart data
-  
-        res.json({ success: true });
-      } else {
-        await orderModel.findByIdAndDelete(orderId);
-        res.json({ success: false });
-      }
-    } catch (error) {
-      console.log(error);
-      res.json({ success: false, message: error.message });
+  const { success, userId, items, amount, address } = req.body;
+
+  try {
+    if (success === "true") {
+      const orderData = {
+        userId,
+        items: JSON.parse(items), // Decode items
+        address,
+        amount,
+        paymentMethod: "Stripe",
+        payment: true,
+        date: Date.now(),
+      };
+
+      const newOrder = new orderModel(orderData);
+      await newOrder.save();
+
+      await userModel.findByIdAndUpdate(userId, { $set: { cartData: {} } });
+
+      res.json({ success: true });
+    } else {
+      res.json({ success: false });
     }
-  };
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
 
 
 // Placing orders using Razorpay Method
